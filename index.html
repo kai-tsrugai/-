@@ -2,9 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <!-- スマホの拡大・縮小を防止し画面いっぱいに表示 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ソウル・アリーナ - スマホ対応版</title>
+  <title>ダンジョンオートハンター - 放置育成RPG</title>
   <style>
     * {
       box-sizing: border-box;
@@ -12,671 +11,783 @@
       padding: 0;
       user-select: none;
       -webkit-user-select: none;
-      touch-action: none; /* スマホのデフォルトスクロール等を無効化 */
     }
 
     body {
       background-color: #121218;
       color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      padding-bottom: 110px; /* 下部広告領域の確保 */
-      overflow: hidden;
+      padding-bottom: 70px; /* 広告枠のスペース確保 */
     }
 
-    /* ヘッダー情報 */
-    .header-info {
+    /* 上部リソースステータス */
+    .resource-bar {
       width: 100%;
-      max-width: 500px;
-      padding: 6px 12px;
+      max-width: 480px;
       background: #1e1e28;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      padding: 10px;
+      gap: 5px;
+      border-bottom: 2px solid #3a3a4c;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .res-box {
+      background: #14141c;
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid #2a2a3a;
+    }
+
+    .res-label {
+      font-size: 11px;
+      color: #aaa;
+      display: block;
+    }
+
+    .res-val {
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .val-ore { color: #ff9900; }
+    .val-soul { color: #bc70ff; }
+    .val-proof { color: #ff3366; }
+
+    /* バトルフィールド表示エリア */
+    .battle-area {
+      width: 100%;
+      max-width: 480px;
+      height: 220px;
+      background: linear-gradient(to bottom, #1a1a26, #0e0e14);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 0;
+      border-bottom: 2px solid #3a3a4c;
+    }
+
+    .stage-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #ffcc00;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 4px 12px;
+      border-radius: 12px;
+    }
+
+    /* 戦闘演出 */
+    .characters-container {
+      width: 100%;
       display: flex;
       justify-content: space-around;
       align-items: center;
-      font-size: 12px;
-      border-bottom: 2px solid #3a3a4c;
-      box-sizing: border-box;
-    }
-
-    .info-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .info-val {
-      font-weight: bold;
-      color: #00ffcc;
-      font-size: 13px;
-    }
-
-    /* ゲームエリア容器 */
-    .game-wrapper {
+      padding: 0 40px;
       position: relative;
+      margin-top: 20px;
+    }
+
+    .entity {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 28px;
+      position: relative;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    }
+
+    .player-entity {
+      background: radial-gradient(circle, #00ffcc, #0088cc);
+      border: 2px solid #fff;
+    }
+
+    .enemy-entity {
+      background: radial-gradient(circle, #ff5555, #990000);
+      border: 2px solid #ff9999;
+    }
+
+    .boss-entity {
+      width: 75px;
+      height: 75px;
+      background: radial-gradient(circle, #ff0055, #440011);
+      border: 3px solid #ffcc00;
+      font-size: 36px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    .pet-badge {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      font-size: 20px;
+    }
+
+    .hp-bar-container {
+      width: 80px;
+      height: 6px;
+      background: #333;
+      border-radius: 3px;
+      position: absolute;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      overflow: hidden;
+    }
+
+    .hp-bar-fill {
+      height: 100%;
+      background: #00ffcc;
       width: 100%;
-      max-width: 500px;
+      transition: width 0.1s;
+    }
+
+    .enemy-hp { background: #ff4444; }
+
+    .dmg-popup {
+      position: absolute;
+      font-weight: bold;
+      font-size: 18px;
+      color: #ffcc00;
+      pointer-events: none;
+      animation: floatUp 0.6s ease-out forwards;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    .crit-popup {
+      color: #ff3300;
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-35px) scale(1.2); }
+    }
+
+    /* 施設切り替えタブ */
+    .nav-tabs {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      background: #181822;
+      border-bottom: 2px solid #3a3a4c;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px 0;
+      background: none;
+      border: none;
+      color: #888;
+      font-weight: bold;
+      font-size: 13px;
+      cursor: pointer;
       display: flex;
       flex-direction: column;
       align-items: center;
+      gap: 3px;
     }
 
-    canvas {
-      background-color: #1e1e28;
-      width: 100%;
-      height: auto;
-      max-height: 55vh;
-      touch-action: none;
+    .tab-btn.active {
+      color: #00ffcc;
+      background: #222230;
+      border-bottom: 3px solid #00ffcc;
     }
 
-    /* タッチコントローラーエリア */
-    .controls-container {
+    /* パネルコンテンツ */
+    .panel-container {
       width: 100%;
-      max-width: 500px;
-      height: 140px;
+      max-width: 480px;
+      padding: 15px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .panel {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .panel.active {
+      display: flex;
+    }
+
+    .upgrade-card {
+      background: #1e1e2c;
+      border: 1px solid #333348;
+      border-radius: 12px;
+      padding: 12px 15px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 25px;
-      box-sizing: border-box;
-      background: #14141c;
-      border-top: 2px solid #3a3a4c;
+      cursor: pointer;
+      transition: background 0.2s;
     }
 
-    /* バーチャルジョイスティック */
-    .joystick-base {
-      width: 100px;
-      height: 100px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      position: relative;
+    .upgrade-card:active {
+      background: #2a2a3f;
+    }
+
+    .upgrade-info {
       display: flex;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
+      gap: 2px;
     }
 
-    .joystick-stick {
-      width: 44px;
-      height: 44px;
-      background: rgba(0, 255, 204, 0.6);
-      border: 2px solid #00ffcc;
-      border-radius: 50%;
-      position: absolute;
-      box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+    .upgrade-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #fff;
     }
 
-    /* 攻撃ボタン */
-    .attack-btn {
-      width: 80px;
-      height: 80px;
-      background: linear-gradient(135deg, #ff9900, #ff3300);
-      border: 3px solid #ffcc00;
-      border-radius: 50%;
+    .upgrade-effect {
+      font-size: 12px;
+      color: #00ffcc;
+    }
+
+    .upgrade-btn-action {
+      padding: 8px 14px;
+      background: linear-gradient(135deg, #ff9900, #ff5500);
+      border: none;
+      border-radius: 8px;
       color: #fff;
       font-weight: bold;
-      font-size: 18px;
+      font-size: 12px;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      box-shadow: 0 4px 15px rgba(255, 102, 0, 0.5);
-      cursor: pointer;
+      min-width: 90px;
     }
 
-    .attack-btn:active {
-      transform: scale(0.92);
-      background: linear-gradient(135deg, #e68500, #cc2900);
+    .upgrade-btn-action:disabled {
+      background: #444;
+      opacity: 0.5;
     }
 
-    /* モーダル（鍛冶屋・祭壇） */
+    .soul-btn { background: linear-gradient(135deg, #a040ff, #7000cc); }
+    .proof-btn { background: linear-gradient(135deg, #ff0055, #990033); }
+
+    /* オフライン報酬ダイアログ */
     .modal-overlay {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      z-index: 1000;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 999;
       justify-content: center;
       align-items: center;
       padding: 20px;
     }
 
-    .modal-content {
-      background: #252535;
-      border: 3px solid #ffcc00;
+    .modal-card {
+      background: #222232;
+      border: 2px solid #00ffcc;
       border-radius: 16px;
       padding: 20px;
       width: 100%;
       max-width: 320px;
       text-align: center;
-      box-shadow: 0 0 25px rgba(255, 204, 0, 0.3);
+      box-shadow: 0 0 25px rgba(0, 255, 204, 0.3);
     }
 
     .modal-title {
-      font-size: 20px;
-      color: #ffcc00;
+      font-size: 18px;
+      font-weight: bold;
+      color: #00ffcc;
       margin-bottom: 8px;
+    }
+
+    .modal-time {
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 15px;
+    }
+
+    .reward-box {
+      background: #14141c;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .reward-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
       font-weight: bold;
     }
 
-    .modal-desc {
-      font-size: 13px;
-      color: #ccc;
-      margin-bottom: 16px;
-      line-height: 1.4;
-    }
-
-    .modal-btn {
+    .claim-btn {
       width: 100%;
-      background: linear-gradient(135deg, #ff9900, #ff5500);
+      padding: 12px;
+      background: linear-gradient(135deg, #00ffcc, #0088cc);
       border: none;
-      color: #fff;
-      padding: 14px;
       border-radius: 10px;
-      margin-bottom: 10px;
+      color: #000;
       font-weight: bold;
       font-size: 15px;
       cursor: pointer;
     }
 
-    .modal-btn:disabled {
-      opacity: 0.4;
-      background: #555;
-    }
-
-    .close-btn {
-      background: #444;
-      color: #ccc;
-    }
-
-    /* 画面下部 固定広告 */
-    .fixed-bottom-ad-container {
+    /* 固定広告エリア */
+    .fixed-ad-area {
       position: fixed;
       bottom: 0;
       left: 0;
       width: 100%;
-      background: rgba(18, 18, 24, 0.95);
-      border-top: 1px solid #333;
-      padding: 5px 0;
+      height: 60px;
+      background: #0a0a0f;
+      border-top: 1px solid #2a2a3a;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 10px;
-      z-index: 9999;
-    }
-
-    .fixed-bottom-ad {
-      display: inline-block;
-      min-width: 300px;
-      min-height: 50px;
-      text-align: center;
+      z-index: 100;
     }
   </style>
 </head>
 <body>
 
   <!-- ステータスヘッダー -->
-  <div class="header-info">
-    <div class="info-item">
-      <span>HP</span>
-      <span class="info-val" id="hpVal">100/100</span>
+  <div class="resource-bar">
+    <div class="res-box">
+      <span class="res-label">⛏️ 鉱石(鍛冶)</span>
+      <span class="res-val val-ore" id="oreVal">0</span>
     </div>
-    <div class="info-item">
-      <span>攻撃力</span>
-      <span class="info-val" id="atkVal">15</span>
+    <div class="res-box">
+      <span class="res-label">🔮 ソウル(祭壇)</span>
+      <span class="res-val val-soul" id="soulVal">0</span>
     </div>
-    <div class="info-item">
-      <span>攻撃速度</span>
-      <span class="info-val" id="spdVal">1.0x</span>
-    </div>
-    <div class="info-item">
-      <span>鉱石(鍛冶)</span>
-      <span class="info-val" id="oreVal" style="color: #ff9900;">0</span>
-    </div>
-    <div class="info-item">
-      <span>ソウル(祭壇)</span>
-      <span class="info-val" id="soulVal" style="color: #bc70ff;">0</span>
+    <div class="res-box">
+      <span class="res-label">🏆 ボス証(召喚)</span>
+      <span class="res-val val-proof" id="proofVal">0</span>
     </div>
   </div>
 
-  <div class="game-wrapper">
-    <!-- キャンバス（ゲーム画面） -->
-    <canvas id="gameCanvas" width="360" height="420"></canvas>
+  <!-- 戦闘画面（自動バトル） -->
+  <div class="battle-area" id="battleArea">
+    <div class="stage-title" id="stageTitle">ステージ 1-1 (自動進行中)</div>
 
-    <!-- スマホ用タッチ操作パネル -->
-    <div class="controls-container">
-      <div class="joystick-base" id="joyBase">
-        <div class="joystick-stick" id="joyStick"></div>
+    <div class="characters-container">
+      <div class="entity player-entity" id="playerEntity">
+        🗡️
+        <div class="pet-badge" id="petBadge" style="display:none;">🐾</div>
+        <div class="hp-bar-container">
+          <div class="hp-bar-fill" id="playerHpBar"></div>
+        </div>
       </div>
-      <div class="attack-btn" id="attackBtn">攻撃</div>
+
+      <div class="entity enemy-entity" id="enemyEntity">
+        👾
+        <div class="hp-bar-container">
+          <div class="hp-bar-fill enemy-hp" id="enemyHpBar"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size: 11px; color: #777;">放置していても勝手に戦い続けます</div>
+  </div>
+
+  <!-- 施設切り替えタブ -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('blacksmith')">
+      <span>🛠️</span> 鍛冶屋
+    </button>
+    <button class="tab-btn" onclick="switchTab('altar')">
+      <span>🔮</span> 祭壇
+    </button>
+    <button class="tab-btn" onclick="switchTab('summon')">
+      <span>🐾</span> 召喚陣
+    </button>
+  </div>
+
+  <!-- パネルエリア -->
+  <div class="panel-container">
+    <!-- 🛠️ 鍛冶屋パネル -->
+    <div class="panel active" id="blacksmithPanel">
+      <div class="upgrade-card" onclick="buyUpgrade('atk')">
+        <div class="upgrade-info">
+          <div class="upgrade-title">⚔️ 攻撃力強化 (Lv.<span id="atkLv">1</span>)</div>
+          <div class="upgrade-effect">基本ダメージ: +<span id="atkAdd">5</span></div>
+        </div>
+        <button class="upgrade-btn-action" id="atkBtn">
+          強化
+          <small>鉱石 <span id="atkCost">10</span></small>
+        </button>
+      </div>
+
+      <div class="upgrade-card" onclick="buyUpgrade('crit')">
+        <div class="upgrade-info">
+          <div class="upgrade-title">💥 会心の一撃 (Lv.<span id="critLv">0</span>)</div>
+          <div class="upgrade-effect">クリティカル率: <span id="critVal">5</span>%</div>
+        </div>
+        <button class="upgrade-btn-action" id="critBtn">
+          強化
+          <small>鉱石 <span id="critCost">25</span></small>
+        </button>
+      </div>
+    </div>
+
+    <!-- 🔮 祭壇パネル -->
+    <div class="panel" id="altarPanel">
+      <div class="upgrade-card" onclick="buyUpgrade('spd')">
+        <div class="upgrade-info">
+          <div class="upgrade-title">⚡ 攻撃速度 (Lv.<span id="spdLv">1</span>)</div>
+          <div class="upgrade-effect">攻撃間隔: <span id="spdVal">1.2</span>秒</div>
+        </div>
+        <button class="upgrade-btn-action soul-btn" id="spdBtn">
+          修練
+          <small>ソウル <span id="spdCost">5</span></small>
+        </button>
+      </div>
+
+      <div class="upgrade-card" onclick="buyUpgrade('double')">
+        <div class="upgrade-info">
+          <div class="upgrade-title">🌀 連続撃破の極意 (Lv.<span id="doubleLv">0</span>)</div>
+          <div class="upgrade-effect">2回連続攻撃確率: <span id="doubleVal">0</span>%</div>
+        </div>
+        <button class="upgrade-btn-action soul-btn" id="doubleBtn">
+          修練
+          <small>ソウル <span id="doubleCost">15</span></small>
+        </button>
+      </div>
+    </div>
+
+    <!-- 🐾 召喚陣パネル -->
+    <div class="panel" id="summonPanel">
+      <div class="upgrade-card" onclick="buyUpgrade('pet')">
+        <div class="upgrade-info">
+          <div class="upgrade-title">🐉 オートペット (Lv.<span id="petLv">0</span>)</div>
+          <div class="upgrade-effect">自動追撃ダメージ: <span id="petVal">0</span></div>
+        </div>
+        <button class="upgrade-btn-action proof-btn" id="petBtn">
+          召喚
+          <small>ボス証 <span id="petCost">1</span></small>
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- 鍛冶屋モーダル -->
-  <div class="modal-overlay" id="blacksmithModal">
-    <div class="modal-content">
-      <div class="modal-title">🛠️ 鍛冶屋</div>
-      <div class="modal-desc">鉱石を消費して武器を鍛え、**【攻撃力】**をアップ！</div>
-      <button class="modal-btn" id="upgradeAtkBtn" onclick="upgradeAtk()">
-        攻撃力 UP (+8)<br>
-        <small id="atkCostText">必要: 鉱石 3個</small>
-      </button>
-
-      <button class="modal-btn close-btn" onclick="closeModal()">戦場に戻る</button>
+  <!-- オフライン放置報酬ダイアログ -->
+  <div class="modal-overlay" id="offlineModal">
+    <div class="modal-card">
+      <div class="modal-title">🌙 おかえりなさい！</div>
+      <div class="modal-time" id="offlineTimeText">離れていた時間: 0分</div>
+      <div class="reward-box">
+        <div class="reward-item">
+          <span>⛏️ 獲得鉱石:</span>
+          <span class="val-ore" id="offlineOreText">+0</span>
+        </div>
+        <div class="reward-item">
+          <span>🔮 獲得ソウル:</span>
+          <span class="val-soul" id="offlineSoulText">+0</span>
+        </div>
+      </div>
+      <button class="claim-btn" onclick="closeOfflineModal()">受け取る！</button>
     </div>
   </div>
 
-  <!-- 祭壇モーダル -->
-  <div class="modal-overlay" id="altarModal">
-    <div class="modal-content" style="border-color: #bc70ff;">
-      <div class="modal-title" style="color: #bc70ff;">🔮 修練の祭壇</div>
-      <div class="modal-desc">ソウルを捧げて身のこなしを鋭くし、**【攻撃速度】**をアップ！</div>
-      <button class="modal-btn" id="upgradeSpdBtn" style="background: linear-gradient(135deg, #a040ff, #7000cc);" onclick="upgradeSpd()">
-        攻撃速度 UP (+20%)<br>
-        <small id="spdCostText">必要: ソウル 3個</small>
-      </button>
-
-      <button class="modal-btn close-btn" onclick="closeModal()">戦場に戻る</button>
-    </div>
-  </div>
-
-  <!-- 画面下部 固定広告 -->
-  <div class="fixed-bottom-ad-container">
-    <div class="fixed-bottom-ad">
-      <!-- admax -->
-      <script src="https://adm.shinobi.jp/s/5235ee24a3bda74d9a1d05e10baf3d94"></script>
-      <!-- admax -->
-    </div>
+  <!-- 下部固定広告枠 -->
+  <div class="fixed-ad-area">
+    <!-- admax -->
+    <script src="https://adm.shinobi.jp/s/5235ee24a3bda74d9a1d05e10baf3d94"></script>
+    <!-- admax -->
   </div>
 
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    // プレイヤー設定
-    const player = {
-      x: 180,
-      y: 260,
-      radius: 13,
-      speed: 2.8,
-      hp: 100,
-      maxHp: 100,
-      atk: 15,
-      atkLevel: 1,
-      spdLevel: 1,
-      attackCooldown: 0,
-      attackAngle: -Math.PI / 2,
-      isAttacking: false,
+    // ゲームデータ
+    let game = {
       ores: 0,
-      souls: 0
+      souls: 0,
+      proofs: 0,
+      stage: 1,
+      subStage: 1,
+      atkLv: 1,
+      critLv: 0,
+      spdLv: 1,
+      doubleLv: 0,
+      petLv: 0,
+      lastTime: Date.now()
     };
 
-    // 施設設定
-    const blacksmith = { x: 60, y: 60, radius: 24, color: '#ff9900', label: '🛠️鍛冶屋' };
-    const altar = { x: 300, y: 60, radius: 24, color: '#bc70ff', label: '🔮祭壇' };
+    // セーブ＆ロード
+    function saveGame() {
+      game.lastTime = Date.now();
+      localStorage.setItem('autoHunterSave', JSON.stringify(game));
+    }
 
-    // 移動入力ベクトル (-1.0 ～ 1.0)
-    let moveInput = { x: 0, y: 0 };
-    let isAttackPressed = false;
-
-    // --- ジョイスティック & タッチ処理 ---
-    const joyBase = document.getElementById('joyBase');
-    const joyStick = document.getElementById('joyStick');
-    let joyTouchId = null;
-    let joyCenter = { x: 0, y: 0 };
-
-    joyBase.addEventListener('touchstart', e => {
-      e.preventDefault();
-      const touch = e.changedTouches[0];
-      joyTouchId = touch.identifier;
-      const rect = joyBase.getBoundingClientRect();
-      joyCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-      updateJoystick(touch);
-    }, { passive: false });
-
-    window.addEventListener('touchmove', e => {
-      if (joyTouchId === null) return;
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === joyTouchId) {
-          updateJoystick(e.changedTouches[i]);
-          break;
+    function loadGame() {
+      const saved = localStorage.getItem('autoHunterSave');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          game = { ...game, ...parsed };
+        } catch (e) {
+          console.error('Save data load error', e);
         }
       }
-    }, { passive: false });
-
-    function resetJoystick() {
-      joyTouchId = null;
-      joyStick.style.transform = `translate(0px, 0px)`;
-      moveInput = { x: 0, y: 0 };
     }
 
-    window.addEventListener('touchend', e => {
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === joyTouchId) resetJoystick();
-      }
-    });
-    window.addEventListener('touchcancel', resetJoystick);
+    // オフライン放置計算
+    function checkOfflineProgress() {
+      const now = Date.now();
+      const diffSec = Math.floor((now - game.lastTime) / 1000);
 
-    function updateJoystick(touch) {
-      const maxRadius = 38;
-      let dx = touch.clientX - joyCenter.x;
-      let dy = touch.clientY - joyCenter.y;
-      const dist = Math.hypot(dx, dy);
+      // 10秒以上離れていたら計算（最大12時間 = 43200秒まで）
+      if (diffSec >= 10) {
+        const cappedSec = Math.min(diffSec, 43200);
+        
+        // 1秒あたりの推定DPSから撃破数を概算
+        const atkInterval = getSpdInterval() / 1000;
+        const dps = (getAtk() * (1 + getCritRate() / 100) * (1 + getDoubleRate() / 100)) / atkInterval + getPetAtk();
+        
+        const stageMult = Math.pow(1.25, game.stage - 1);
+        const avgEnemyHp = 30 * stageMult;
+        const killsPerSec = Math.min(3, dps / avgEnemyHp);
 
-      if (dist > maxRadius) {
-        dx = (dx / dist) * maxRadius;
-        dy = (dy / dist) * maxRadius;
-      }
+        const totalKills = Math.floor(cappedSec * killsPerSec);
+        
+        const gainedOres = Math.floor(totalKills * 4 * stageMult);
+        const gainedSouls = Math.floor(totalKills * 2 * stageMult);
 
-      joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
-      moveInput = { x: dx / maxRadius, y: dy / maxRadius };
-    }
+        if (gainedOres > 0 || gainedSouls > 0) {
+          game.ores += gainedOres;
+          game.souls += gainedSouls;
 
-    // --- 攻撃ボタン処理 ---
-    const attackBtn = document.getElementById('attackBtn');
-    attackBtn.addEventListener('touchstart', e => {
-      e.preventDefault();
-      isAttackPressed = true;
-    }, { passive: false });
-    attackBtn.addEventListener('touchend', () => isAttackPressed = false);
+          // ダイアログ表示
+          const mins = Math.floor(cappedSec / 60);
+          const hrs = Math.floor(mins / 60);
+          let timeStr = `${mins % 60}分`;
+          if (hrs > 0) timeStr = `${hrs}時間 ` + timeStr;
 
-    // PC用キーボード操作サポート
-    const keys = {};
-    window.addEventListener('keydown', e => keys[e.code] = true);
-    window.addEventListener('keyup', e => keys[e.code] = false);
-
-    // 敵・アイテム
-    let enemies = [];
-    let items = [];
-
-    function spawnEnemy() {
-      if (enemies.length >= 5) return;
-      let x, y;
-      do {
-        x = Math.random() * (canvas.width - 50) + 25;
-        y = Math.random() * (canvas.height - 120) + 100;
-      } while (Math.hypot(player.x - x, player.y - y) < 100);
-
-      enemies.push({
-        x: x, y: y, radius: 12, hp: 35, maxHp: 35, speed: 1.1, color: '#ff4444'
-      });
-    }
-
-    // 施設近接 & モーダル処理
-    let activeModal = null;
-
-    function checkFacilityProximity() {
-      if (activeModal) return;
-
-      if (Math.hypot(player.x - blacksmith.x, player.y - blacksmith.y) < player.radius + blacksmith.radius + 5) {
-        openModal('blacksmith');
-      } else if (Math.hypot(player.x - altar.x, player.y - altar.y) < player.radius + altar.radius + 5) {
-        openModal('altar');
+          document.getElementById('offlineTimeText').innerText = `離れていた時間: ${timeStr}`;
+          document.getElementById('offlineOreText').innerText = `+${formatNum(gainedOres)}`;
+          document.getElementById('offlineSoulText').innerText = `+${formatNum(gainedSouls)}`;
+          document.getElementById('offlineModal').style.display = 'flex';
+        }
       }
     }
 
-    function openModal(type) {
-      activeModal = type;
-      resetJoystick();
-      if (type === 'blacksmith') document.getElementById('blacksmithModal').style.display = 'flex';
-      if (type === 'altar') document.getElementById('altarModal').style.display = 'flex';
+    function closeOfflineModal() {
+      document.getElementById('offlineModal').style.display = 'none';
       updateUI();
+      saveGame();
     }
 
-    function closeModal() {
-      document.getElementById('blacksmithModal').style.display = 'none';
-      document.getElementById('altarModal').style.display = 'none';
-      activeModal = null;
-      player.y += 12; // 施設から少し離す
+    // 計算関数
+    function getAtk() { return 10 + (game.atkLv - 1) * 8 * Math.pow(1.15, game.atkLv - 1); }
+    function getCritRate() { return 5 + game.critLv * 3; }
+    function getSpdInterval() { return Math.max(200, 1200 - (game.spdLv - 1) * 80); }
+    function getDoubleRate() { return game.doubleLv * 5; }
+    function getPetAtk() { return game.petLv === 0 ? 0 : 15 * Math.pow(1.25, game.petLv); }
+
+    function getAtkCost() { return Math.floor(10 * Math.pow(1.3, game.atkLv - 1)); }
+    function getCritCost() { return Math.floor(25 * Math.pow(1.5, game.critLv)); }
+    function getSpdCost() { return Math.floor(5 * Math.pow(1.4, game.spdLv - 1)); }
+    function getDoubleCost() { return Math.floor(15 * Math.pow(1.6, game.doubleLv)); }
+    function getPetCost() { return Math.floor(1 * Math.pow(2, game.petLv)); }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+
+      event.currentTarget.classList.add('active');
+      document.getElementById(tabName + 'Panel').classList.add('active');
     }
 
-    // 強化処理
-    function getAtkCost() { return player.atkLevel * 3; }
-    function getSpdCost() { return player.spdLevel * 3; }
-
-    function upgradeAtk() {
-      const cost = getAtkCost();
-      if (player.ores >= cost) {
-        player.ores -= cost;
-        player.atkLevel++;
-        player.atk += 8;
-        updateUI();
-      }
-    }
-
-    function upgradeSpd() {
-      const cost = getSpdCost();
-      if (player.souls >= cost) {
-        player.souls -= cost;
-        player.spdLevel++;
-        updateUI();
-      }
+    function formatNum(num) {
+      if (num >= 1e8) return (num / 1e8).toFixed(2) + '億';
+      if (num >= 1e4) return (num / 1e4).toFixed(1) + '万';
+      return Math.floor(num).toLocaleString();
     }
 
     function updateUI() {
-      document.getElementById('hpVal').innerText = `${Math.ceil(player.hp)}/${player.maxHp}`;
-      document.getElementById('atkVal').innerText = player.atk;
-      const spdMult = (1 + (player.spdLevel - 1) * 0.2).toFixed(1);
-      document.getElementById('spdVal').innerText = `${spdMult}x`;
-      document.getElementById('oreVal').innerText = player.ores;
-      document.getElementById('soulVal').innerText = player.souls;
+      document.getElementById('oreVal').innerText = formatNum(game.ores);
+      document.getElementById('soulVal').innerText = formatNum(game.souls);
+      document.getElementById('proofVal').innerText = formatNum(game.proofs);
 
-      const atkCost = getAtkCost();
-      document.getElementById('atkCostText').innerText = `必要: 鉱石 ${atkCost}個`;
-      document.getElementById('upgradeAtkBtn').disabled = player.ores < atkCost;
+      document.getElementById('atkLv').innerText = game.atkLv;
+      document.getElementById('atkAdd').innerText = formatNum(getAtk());
+      document.getElementById('atkCost').innerText = formatNum(getAtkCost());
+      document.getElementById('atkBtn').disabled = game.ores < getAtkCost();
 
-      const spdCost = getSpdCost();
-      document.getElementById('spdCostText').innerText = `必要: ソウル ${spdCost}個`;
-      document.getElementById('upgradeSpdBtn').disabled = player.souls < spdCost;
+      document.getElementById('critLv').innerText = game.critLv;
+      document.getElementById('critVal').innerText = getCritRate();
+      document.getElementById('critCost').innerText = formatNum(getCritCost());
+      document.getElementById('critBtn').disabled = game.ores < getCritCost();
+
+      document.getElementById('spdLv').innerText = game.spdLv;
+      document.getElementById('spdVal').innerText = (getSpdInterval() / 1000).toFixed(2);
+      document.getElementById('spdCost').innerText = formatNum(getSpdCost());
+      document.getElementById('spdBtn').disabled = game.souls < getSpdCost();
+
+      document.getElementById('doubleLv').innerText = game.doubleLv;
+      document.getElementById('doubleVal').innerText = getDoubleRate();
+      document.getElementById('doubleCost').innerText = formatNum(getDoubleCost());
+      document.getElementById('doubleBtn').disabled = game.souls < getDoubleCost();
+
+      document.getElementById('petLv').innerText = game.petLv;
+      document.getElementById('petVal').innerText = formatNum(getPetAtk());
+      document.getElementById('petCost').innerText = formatNum(getPetCost());
+      document.getElementById('petBtn').disabled = game.proofs < getPetCost();
+
+      document.getElementById('petBadge').style.display = game.petLv > 0 ? 'block' : 'none';
     }
 
-    // ゲーム更新ループ
-    function update() {
-      if (activeModal) return;
-
-      // 移動入力取得（ジョイスティック優先、なければキーボード）
-      let dx = moveInput.x;
-      let dy = moveInput.y;
-
-      if (dx === 0 && dy === 0) {
-        if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
-        if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
-        if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
-        if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+    function buyUpgrade(type) {
+      if (type === 'atk' && game.ores >= getAtkCost()) {
+        game.ores -= getAtkCost();
+        game.atkLv++;
+      } else if (type === 'crit' && game.ores >= getCritCost()) {
+        game.ores -= getCritCost();
+        game.critLv++;
+      } else if (type === 'spd' && game.souls >= getSpdCost()) {
+        game.souls -= getSpdCost();
+        game.spdLv++;
+        restartAutoAttack();
+      } else if (type === 'double' && game.souls >= getDoubleCost()) {
+        game.souls -= getDoubleCost();
+        game.doubleLv++;
+      } else if (type === 'pet' && game.proofs >= getPetCost()) {
+        game.proofs -= getPetCost();
+        game.petLv++;
       }
+      updateUI();
+      saveGame();
+    }
 
-      if (dx !== 0 || dy !== 0) {
-        const len = Math.hypot(dx, dy);
-        player.x += (dx / len) * player.speed;
-        player.y += (dy / len) * player.speed;
-        player.attackAngle = Math.atan2(dy, dx);
-      }
+    let enemyHp = 30;
+    let enemyMaxHp = 30;
+    let isBoss = false;
 
-      // 画面境界
-      player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
-      player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+    function spawnEnemy() {
+      isBoss = (game.subStage === 5);
+      const stageMult = Math.pow(1.35, game.stage - 1) * Math.pow(1.1, game.subStage - 1);
+      
+      enemyMaxHp = Math.floor(30 * stageMult * (isBoss ? 3.5 : 1));
+      enemyHp = enemyMaxHp;
 
-      // 攻撃クールダウン & 発動
-      const cooldownMax = Math.max(6, 22 - (player.spdLevel - 1) * 3);
-      if (player.attackCooldown > 0) player.attackCooldown--;
-
-      const wantsAttack = isAttackPressed || keys['Space'];
-
-      if (wantsAttack && player.attackCooldown <= 0) {
-        player.isAttacking = true;
-        player.attackCooldown = cooldownMax;
-
-        // 攻撃判定
-        const attackRange = 40;
-        enemies.forEach(e => {
-          const dist = Math.hypot(e.x - player.x, e.y - player.y);
-          if (dist < attackRange + e.radius) {
-            const angleToEnemy = Math.atan2(e.y - player.y, e.x - player.x);
-            let diff = Math.abs(angleToEnemy - player.attackAngle);
-            if (diff > Math.PI) diff = Math.PI * 2 - diff;
-
-            if (diff < Math.PI / 2.5) {
-              e.hp -= player.atk;
-              e.x += Math.cos(angleToEnemy) * 12;
-              e.y += Math.sin(angleToEnemy) * 12;
-            }
-          }
-        });
+      const enemyEl = document.getElementById('enemyEntity');
+      if (isBoss) {
+        enemyEl.className = 'entity enemy-entity boss-entity';
+        enemyEl.innerText = '👹';
+        document.getElementById('stageTitle').innerText = `ステージ ${game.stage}-${game.subStage} (BOSS戦!)`;
       } else {
-        player.isAttacking = false;
+        enemyEl.className = 'entity enemy-entity';
+        const icons = ['👾', '🦇', '🐺', '💀', '🗿'];
+        enemyEl.innerText = icons[(game.stage + game.subStage) % icons.length];
+        document.getElementById('stageTitle').innerText = `ステージ ${game.stage}-${game.subStage}`;
       }
 
-      // 敵処理
-      if (Math.random() < 0.03) spawnEnemy();
-
-      for (let i = enemies.length - 1; i >= 0; i--) {
-        const e = enemies[i];
-        const angle = Math.atan2(player.y - e.y, player.x - e.x);
-        e.x += Math.cos(angle) * e.speed;
-        e.y += Math.sin(angle) * e.speed;
-
-        // 被ダメージ
-        if (Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius) {
-          player.hp -= 0.35;
-          if (player.hp <= 0) {
-            alert('倒れてしまった…！やり直します。');
-            player.hp = player.maxHp;
-            player.x = 180;
-            player.y = 260;
-            enemies = [];
-            items = [];
-          }
-          updateUI();
-        }
-
-        // 撃破 & ドロップ
-        if (e.hp <= 0) {
-          const isOre = Math.random() < 0.5;
-          items.push({
-            x: e.x, y: e.y,
-            type: isOre ? 'ore' : 'soul',
-            color: isOre ? '#ff9900' : '#bc70ff'
-          });
-          enemies.splice(i, 1);
-        }
-      }
-
-      // アイテム拾い
-      for (let i = items.length - 1; i >= 0; i--) {
-        const item = items[i];
-        if (Math.hypot(player.x - item.x, player.y - item.y) < player.radius + 10) {
-          if (item.type === 'ore') player.ores++;
-          else player.souls++;
-          items.splice(i, 1);
-          updateUI();
-        }
-      }
-
-      checkFacilityProximity();
+      updateHpBar();
     }
 
-    // 描画処理
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function updateHpBar() {
+      const pct = Math.max(0, (enemyHp / enemyMaxHp) * 100);
+      document.getElementById('enemyHpBar').style.width = pct + '%';
+    }
 
-      // 鍛冶屋
-      ctx.beginPath();
-      ctx.arc(blacksmith.x, blacksmith.y, blacksmith.radius, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 153, 0, 0.2)';
-      ctx.fill();
-      ctx.strokeStyle = blacksmith.color;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = blacksmith.color;
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(blacksmith.label, blacksmith.x, blacksmith.y + 4);
+    function showDamage(amount, isCrit) {
+      const enemyEl = document.getElementById('enemyEntity');
+      const rect = enemyEl.getBoundingClientRect();
+      const areaRect = document.getElementById('battleArea').getBoundingClientRect();
 
-      // 祭壇
-      ctx.beginPath();
-      ctx.arc(altar.x, altar.y, altar.radius, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(188, 112, 255, 0.2)';
-      ctx.fill();
-      ctx.strokeStyle = altar.color;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = altar.color;
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(altar.label, altar.x, altar.y + 4);
+      const popup = document.createElement('div');
+      popup.className = `dmg-popup ${isCrit ? 'crit-popup' : ''}`;
+      popup.innerText = (isCrit ? 'CRITICAL! ' : '') + formatNum(amount);
+      popup.style.left = (rect.left - areaRect.left + 10 + Math.random() * 20) + 'px';
+      popup.style.top = (rect.top - areaRect.top) + 'px';
 
-      // ドロップアイテム
-      items.forEach(item => {
-        ctx.beginPath();
-        ctx.arc(item.x, item.y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = item.color;
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      });
+      document.getElementById('battleArea').appendChild(popup);
+      setTimeout(() => popup.remove(), 600);
+    }
 
-      // 敵
-      enemies.forEach(e => {
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
-        ctx.fillStyle = e.color;
-        ctx.fill();
+    function attackEnemy() {
+      if (enemyHp <= 0) return;
 
-        // HPバー
-        const barW = e.radius * 2;
-        ctx.fillStyle = '#333';
-        ctx.fillRect(e.x - e.radius, e.y - e.radius - 5, barW, 3);
-        ctx.fillStyle = '#00ffcc';
-        ctx.fillRect(e.x - e.radius, e.y - e.radius - 5, barW * (e.hp / e.maxHp), 3);
-      });
+      let damage = getAtk();
+      const isCrit = Math.random() * 100 < getCritRate();
+      if (isCrit) damage *= 2;
 
-      // 斬撃エフェクト
-      if (player.isAttacking) {
-        ctx.beginPath();
-        ctx.arc(
-          player.x, player.y, 38,
-          player.attackAngle - Math.PI / 3,
-          player.attackAngle + Math.PI / 3
-        );
-        ctx.strokeStyle = 'rgba(255, 204, 0, 0.85)';
-        ctx.lineWidth = 5;
-        ctx.stroke();
+      enemyHp -= damage;
+      showDamage(damage, isCrit);
+      updateHpBar();
+
+      if (enemyHp <= 0) onEnemyDefeated();
+    }
+
+    setInterval(() => {
+      if (game.petLv > 0 && enemyHp > 0) {
+        const petDmg = getPetAtk();
+        enemyHp -= petDmg;
+        showDamage(petDmg, false);
+        updateHpBar();
+        if (enemyHp <= 0) onEnemyDefeated();
+      }
+    }, 1000);
+
+    function onEnemyDefeated() {
+      const rewardMult = Math.pow(1.25, game.stage - 1);
+      game.ores += Math.floor((3 + Math.random() * 3) * rewardMult);
+      game.souls += Math.floor((1 + Math.random() * 2) * rewardMult);
+
+      if (isBoss) {
+        game.proofs += 1;
+        game.stage++;
+        game.subStage = 1;
+      } else {
+        game.subStage++;
       }
 
-      // プレイヤー
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-      ctx.fillStyle = '#00ffcc';
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // 向きガイド
-      ctx.beginPath();
-      ctx.moveTo(player.x, player.y);
-      ctx.lineTo(
-        player.x + Math.cos(player.attackAngle) * 18,
-        player.y + Math.sin(player.attackAngle) * 18
-      );
-      ctx.strokeStyle = '#00ffcc';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      updateUI();
+      saveGame();
+      setTimeout(spawnEnemy, 250);
     }
 
-    function gameLoop() {
-      update();
-      draw();
-      requestAnimationFrame(gameLoop);
+    let attackTimer = null;
+    function restartAutoAttack() {
+      if (attackTimer) clearInterval(attackTimer);
+      attackTimer = setInterval(() => {
+        attackEnemy();
+        if (Math.random() * 100 < getDoubleRate()) {
+          setTimeout(attackEnemy, 120);
+        }
+      }, getSpdInterval());
     }
 
+    // 5秒ごとに自動セーブ
+    setInterval(saveGame, 5000);
+
+    // アプリ初期化
+    loadGame();
+    checkOfflineProgress();
+    spawnEnemy();
     updateUI();
-    gameLoop();
+    restartAutoAttack();
   </script>
 </body>
 </html>
