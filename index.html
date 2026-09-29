@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ソウル・アリーナ - 鍛冶屋と祭壇のアクションRPG</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: #121218;
+      color: #ffffff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding-bottom: 130px; /* 広告用余白 */
+      overflow-x: hidden;
+    }
+
+    h1 {
+      margin: 15px 0 5px;
+      font-size: 24px;
+      color: #ffcc00;
+      text-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+    }
+
+    p.sub {
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 15px;
+    }
+
+    .game-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      align-items: flex-start;
+      max-width: 1000px;
+      width: 100%;
+      padding: 0 10px;
+    }
+
+    /* ゲームキャンバス */
+    #gameCanvas {
+      background-color: #1e1e28;
+      border: 3px solid #3a3a4c;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      cursor: crosshair;
+    }
+
+    /* ステータス＆解説UI */
+    .panel {
+      background: #1e1e28;
+      border: 2px solid #3a3a4c;
+      border-radius: 12px;
+      padding: 15px;
+      width: 320px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+
+    .status-box {
+      background: #14141c;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border-left: 4px solid #ffcc00;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .status-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .val {
+      font-weight: bold;
+      color: #00ffcc;
+    }
+
+    .facility-guide {
+      background: #282838;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+
+    .facility-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #ff9900;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #3a3a4c;
+      padding-bottom: 4px;
+    }
+
+    .facility-item {
+      font-size: 12px;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .facility-item strong {
+      color: #fff;
+    }
+
+    /* モーダル（鍛冶屋・祭壇の強化画面） */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: #252535;
+      border: 3px solid #ffcc00;
+      border-radius: 12px;
+      padding: 20px;
+      width: 340px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(255, 204, 0, 0.3);
+    }
+
+    .modal-title {
+      font-size: 20px;
+      color: #ffcc00;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: #ccc;
+      margin-bottom: 15px;
+    }
+
+    .modal-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #ff9900, #ff5500);
+      border: none;
+      color: #fff;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+
+    .modal-btn:hover:not(:disabled) {
+      transform: scale(1.02);
+    }
+
+    .modal-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: #555;
+    }
+
+    .close-btn {
+      background: #444;
+      color: #ccc;
+      margin-top: 5px;
+    }
+
+    /* 固定広告コンテナ */
+    .fixed-bottom-ad-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(18, 18, 24, 0.95);
+      border-top: 1px solid #333;
+      padding: 8px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      z-index: 9999;
+      box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.6);
+    }
+
+    .fixed-bottom-ad {
+      display: inline-block;
+      min-width: 300px;
+      min-height: 50px;
+      text-align: center;
+    }
+
+    @media (max-width: 650px) {
+      .fixed-bottom-ad-container {
+        flex-direction: column;
+        gap: 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>ソウル・アリーナ</h1>
+  <p class="sub">WASD / 矢印キー：移動 | スペースキー：攻撃 | 施設に近づいて強化！</p>
+
+  <div class="game-container">
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+    <div class="panel">
+      <div class="status-box">
+        <div class="status-row">
+          <span>プレイヤーHP:</span>
+          <span class="val" id="hpVal">100 / 100</span>
+        </div>
+        <div class="status-row">
+          <span>攻撃力 (ATK):</span>
+          <span class="val" id="atkVal">15</span>
+        </div>
+        <div class="status-row">
+          <span>攻撃速度 (SPD):</span>
+          <span class="val" id="spdVal">1.0x</span>
+        </div>
+        <div class="status-row">
+          <span>所持鉱石 (鍛冶用):</span>
+          <span class="val" id="oreVal" style="color: #ff9900;">0 個</span>
+        </div>
+        <div class="status-row">
+          <span>所持ソウル (祭壇用):</span>
+          <span class="val" id="soulVal" style="color: #bc70ff;">0 個</span>
+        </div>
+      </div>
+
+      <div class="facility-guide">
+        <div class="facility-title">マップ内の専用強化施設</div>
+        <div class="facility-item">
+          <strong style="color: #ff9900;">🛠️ 鍛冶屋 (オレンジ枠)</strong><br>
+          敵が落とす「鉱石」を消費して**【攻撃力 (ATK)】**を鍛え上げる！
+        </div>
+        <div class="facility-item">
+          <strong style="color: #bc70ff;">🔮 修練の祭壇 (紫枠)</strong><br>
+          敵が落とす「ソウル」を捧げて**【攻撃速度 (SPD)】**を限界突破させる！
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 鍛冶屋モーダル -->
+  <div class="modal-overlay" id="blacksmithModal">
+    <div class="modal-content">
+      <div class="modal-title">🛠️ 伝説の鍛冶屋</div>
+      <div class="modal-desc">鉱石を使って武器を鍛え直し、攻撃力を強化します。</div>
+      <button class="modal-btn" id="upgradeAtkBtn" onclick="upgradeAtk()">
+        攻撃力 UP (+5)<br>
+        <small id="atkCostText">必要: 鉱石 3個</small>
+      </button>
+      <button class="modal-btn close-btn" onclick="closeModal()">戦場に戻る</button>
+    </div>
+  </div>
+
+  <!-- 祭壇モーダル -->
+  <div class="modal-overlay" id="altarModal">
+    <div class="modal-content" style="border-color: #bc70ff;">
+      <div class="modal-title" style="color: #bc70ff;">🔮 修練の祭壇</div>
+      <div class="modal-desc">ソウルを捧げて身のこなしを鋭くし、攻撃速度を高めます。</div>
+      <button class="modal-btn" id="upgradeSpdBtn" style="background: linear-gradient(135deg, #a040ff, #7000cc);" onclick="upgradeSpd()">
+        攻撃速度 UP (+15%)<br>
+        <small id="spdCostText">必要: ソウル 3個</small>
+      </button>
+      <button class="modal-btn close-btn" onclick="closeModal()">戦場に戻る</button>
+    </div>
+  </div>
+
+  <!-- 画面下部 固定広告 -->
+  <div class="fixed-bottom-ad-container">
+    <div class="fixed-bottom-ad">
+      <!-- admax -->
+      <script src="https://adm.shinobi.jp/s/5235ee24a3bda74d9a1d05e10baf3d94"></script>
+      <!-- admax -->
+    </div>
+    <div class="fixed-bottom-ad">
+      <!-- admax -->
+      <script src="https://adm.shinobi.jp/s/5235ee24a3bda74d9a1d05e10baf3d94"></script>
+      <!-- admax -->
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // プレイヤーデータ
+    const player = {
+      x: 300,
+      y: 200,
+      radius: 14,
+      speed: 3,
+      hp: 100,
+      maxHp: 100,
+      atk: 15,
+      atkLevel: 1,
+      spdLevel: 1,
+      attackCooldown: 0,
+      attackAngle: 0,
+      isAttacking: false,
+      attackArc: 0,
+      ores: 0,
+      souls: 0
+    };
+
+    // 専用施設データ（マップ上に配置）
+    const blacksmith = { x: 80, y: 80, radius: 25, color: '#ff9900', label: '🛠️ 鍛冶屋' };
+    const altar = { x: 520, y: 80, radius: 25, color: '#bc70ff', label: '🔮 祭壇' };
+
+    // キー状態
+    const keys = {};
+    window.addEventListener('keydown', e => {
+      keys[e.code] = true;
+      if (e.code === 'Space') e.preventDefault(); // スクロール防止
+    });
+    window.addEventListener('keyup', e => keys[e.code] = false);
+
+    // ドロップアイテム・敵配列
+    let enemies = [];
+    let items = [];
+
+    // 敵スポーン
+    function spawnEnemy() {
+      if (enemies.length >= 6) return;
+      
+      let x, y;
+      do {
+        x = Math.random() * (canvas.width - 60) + 30;
+        y = Math.random() * (canvas.height - 100) + 80;
+      } while (Math.hypot(player.x - x, player.y - y) < 120);
+
+      enemies.push({
+        x: x,
+        y: y,
+        radius: 13,
+        hp: 40,
+        maxHp: 40,
+        atk: 5,
+        speed: 1.2,
+        color: '#ff4444',
+        attackTimer: 0
+      });
+    }
+
+    // 施設近接チェック＆モーダル開閉
+    let activeModal = null;
+
+    function checkFacilityProximity() {
+      if (activeModal) return;
+
+      // 鍛冶屋チェック
+      if (Math.hypot(player.x - blacksmith.x, player.y - blacksmith.y) < player.radius + blacksmith.radius + 5) {
+        openModal('blacksmith');
+      }
+      // 祭壇チェック
+      else if (Math.hypot(player.x - altar.x, player.y - altar.y) < player.radius + altar.radius + 5) {
+        openModal('altar');
+      }
+    }
+
+    function openModal(type) {
+      activeModal = type;
+      if (type === 'blacksmith') {
+        document.getElementById('blacksmithModal').style.display = 'flex';
+      } else if (type === 'altar') {
+        document.getElementById('altarModal').style.display = 'flex';
+      }
+      updateUI();
+    }
+
+    function closeModal() {
+      document.getElementById('blacksmithModal').style.display = 'none';
+      document.getElementById('altarModal').style.display = 'none';
+      activeModal = null;
+      // 少し離す（連動してすぐ再開するのを防止）
+      player.y += 10;
+    }
+
+    // 強化処理
+    function getAtkCost() { return player.atkLevel * 3; }
+    function getSpdCost() { return player.spdLevel * 3; }
+
+    function upgradeAtk() {
+      const cost = getAtkCost();
+      if (player.ores >= cost) {
+        player.ores -= cost;
+        player.atkLevel++;
+        player.atk += 8;
+        updateUI();
+      }
+    }
+
+    function upgradeSpd() {
+      const cost = getSpdCost();
+      if (player.souls >= cost) {
+        player.souls -= cost;
+        player.spdLevel++;
+        updateUI();
+      }
+    }
+
+    // UI更新
+    function updateUI() {
+      document.getElementById('hpVal').innerText = `${Math.ceil(player.hp)} / ${player.maxHp}`;
+      document.getElementById('atkVal').innerText = player.atk;
+      const spdMult = (1 + (player.spdLevel - 1) * 0.2).toFixed(1);
+      document.getElementById('spdVal').innerText = `${spdMult}x`;
+      document.getElementById('oreVal').innerText = `${player.ores} 個`;
+      document.getElementById('soulVal').innerText = `${player.souls} 個`;
+
+      // モーダル側ボタン状態
+      const atkCost = getAtkCost();
+      document.getElementById('atkCostText').innerText = `必要: 鉱石 ${atkCost}個`;
+      document.getElementById('upgradeAtkBtn').disabled = player.ores < atkCost;
+
+      const spdCost = getSpdCost();
+      document.getElementById('spdCostText').innerText = `必要: ソウル ${spdCost}個`;
+      document.getElementById('upgradeSpdBtn').disabled = player.souls < spdCost;
+    }
+
+    // 更新処理
+    function update() {
+      if (activeModal) return; // モーダル開いている間は停止
+
+      // プレイヤー移動
+      let dx = 0, dy = 0;
+      if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+      if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+
+      if (dx !== 0 && dy !== 0) {
+        dx *= 0.7071;
+        dy *= 0.7071;
+      }
+
+      player.x += dx * player.speed;
+      player.y += dy * player.speed;
+
+      // 画面端制限
+      player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+      player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+      // 移動方向を攻撃の向きにセット
+      if (dx !== 0 || dy !== 0) {
+        player.attackAngle = Math.atan2(dy, dx);
+      }
+
+      // 攻撃クールダウン＆攻撃発動（スペースキー）
+      const cooldownMax = Math.max(8, 25 - (player.spdLevel - 1) * 3);
+      if (player.attackCooldown > 0) player.attackCooldown--;
+
+      if (keys['Space'] && player.attackCooldown <= 0) {
+        player.isAttacking = true;
+        player.attackArc = Math.PI / 2; // 斬撃の範囲
+        player.attackCooldown = cooldownMax;
+
+        // 攻撃判定（扇形領域）
+        const attackRange = 45;
+        enemies.forEach(e => {
+          const dist = Math.hypot(e.x - player.x, e.y - player.y);
+          if (dist < attackRange + e.radius) {
+            const angleToEnemy = Math.atan2(e.y - player.y, e.x - player.x);
+            let diff = Math.abs(angleToEnemy - player.attackAngle);
+            if (diff > Math.PI) diff = Math.PI * 2 - diff;
+
+            if (diff < Math.PI / 3) { // 角度内ならヒット
+              e.hp -= player.atk;
+              // ノックバック
+              e.x += Math.cos(angleToEnemy) * 15;
+              e.y += Math.sin(angleToEnemy) * 15;
+            }
+          }
+        });
+      } else {
+        player.isAttacking = false;
+      }
+
+      // 敵の発生・行動処理
+      if (Math.random() < 0.03) spawnEnemy();
+
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+
+        // 追尾移動
+        const angle = Math.atan2(player.y - e.y, player.x - e.x);
+        e.x += Math.cos(angle) * e.speed;
+        e.y += Math.sin(angle) * e.speed;
+
+        // プレイヤーへのダメージ判定
+        if (Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius) {
+          player.hp -= 0.3;
+          if (player.hp <= 0) {
+            alert('ゲームオーバー！リトライします。');
+            player.hp = player.maxHp;
+            player.x = 300;
+            player.y = 200;
+            enemies = [];
+            items = [];
+          }
+          updateUI();
+        }
+
+        // 敵討伐 ➔ 素材ドロップ
+        if (e.hp <= 0) {
+          // 50%で鉱石、50%でソウルをドロップ
+          const isOre = Math.random() < 0.5;
+          items.push({
+            x: e.x,
+            y: e.y,
+            type: isOre ? 'ore' : 'soul',
+            color: isOre ? '#ff9900' : '#bc70ff'
+          });
+          enemies.splice(i, 1);
+        }
+      }
+
+      // アイテム回収処理
+      for (let i = items.length - 1; i >= 0; i--) {
+        const item = items[i];
+        if (Math.hypot(player.x - item.x, player.y - item.y) < player.radius + 12) {
+          if (item.type === 'ore') player.ores++;
+          else player.souls++;
+          items.splice(i, 1);
+          updateUI();
+        }
+      }
+
+      // 施設への接近判定
+      checkFacilityProximity();
+    }
+
+    // 描画処理
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 施設（鍛冶屋）
+      ctx.beginPath();
+      ctx.arc(blacksmith.x, blacksmith.y, blacksmith.radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 153, 0, 0.15)';
+      ctx.fill();
+      ctx.strokeStyle = blacksmith.color;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle = blacksmith.color;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(blacksmith.label, blacksmith.x, blacksmith.y + 4);
+
+      // 施設（祭壇）
+      ctx.beginPath();
+      ctx.arc(altar.x, altar.y, altar.radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(188, 112, 255, 0.15)';
+      ctx.fill();
+      ctx.strokeStyle = altar.color;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle = altar.color;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(altar.label, altar.x, altar.y + 4);
+
+      // ドロップアイテム
+      items.forEach(item => {
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = item.color;
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // 敵
+      enemies.forEach(e => {
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+        ctx.fillStyle = e.color;
+        ctx.fill();
+
+        // HPバー
+        const barW = e.radius * 2;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(e.x - e.radius, e.y - e.radius - 6, barW, 3);
+        ctx.fillStyle = '#00ffcc';
+        ctx.fillRect(e.x - e.radius, e.y - e.radius - 6, barW * (e.hp / e.maxHp), 3);
+      });
+
+      // プレイヤーの斬撃エフェクト
+      if (player.isAttacking) {
+        ctx.beginPath();
+        ctx.arc(
+          player.x, player.y, 42,
+          player.attackAngle - Math.PI / 4,
+          player.attackAngle + Math.PI / 4
+        );
+        ctx.strokeStyle = 'rgba(255, 204, 0, 0.8)';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+      }
+
+      // プレイヤー本体
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#00ffcc';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 向きのガイドライン
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(
+        player.x + Math.cos(player.attackAngle) * 20,
+        player.y + Math.sin(player.attackAngle) * 20
+      );
+      ctx.strokeStyle = '#00ffcc';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // ゲームループ
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    updateUI();
+    gameLoop();
+  </script>
+</body>
+</html>
